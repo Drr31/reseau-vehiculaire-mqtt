@@ -7,7 +7,7 @@
 
 ## 1. Introduction
 
-Ce projet a pour objectif d'établir une communication entre un producteur et un consommateur en utilisant le protocole MQTT (ou AMQP) via un broker. Il s'agit de transmettre des traces CAM, enregistrées dans un fichier PCAP, depuis un producteur vers un consommateur via un broker MQTT. Le présent document détaille le contexte, les objectifs, l'architecture, le choix des technologies, l'implémentation et les résultats obtenus.
+Ce projet a pour objectif d'établir une communication entre un producteur et un consommateur en utilisant le protocole MQTT via un broker. Il s'agit de transmettre des traces CAM, enregistrées dans un fichier PCAP, depuis un producteur vers un consommateur via un broker MQTT. Le présent document détaille le contexte, les objectifs, l'architecture, le choix des technologies, l'implémentation et les résultats obtenus.
 
 ---
 
