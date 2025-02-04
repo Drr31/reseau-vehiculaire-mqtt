@@ -1,6 +1,6 @@
 import time
 from scapy.all import rdpcap  # Pour lire le fichier PCAP et manipuler les paquets.
-from mqqt_service import MQTTService
+from mqtt_service import MQTTService
 
 # Définition du topic sur lequel les paquets seront publiés.
 MQTT_TOPIC="vehicule/cam"

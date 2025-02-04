@@ -1,5 +1,6 @@
 from scapy.all import Ether # Pour décoder le paquet reçu et afficher ses détails.
-from mqqt_service import MQTTService
+from mqtt_service import MQTTService
+import struct
 
 MQTT_TOPIC="vehicule/cam"
 
@@ -31,6 +32,22 @@ def on_message(client,userdata,msg):
         print("Détails du paquet :")
         # Affiche de manière détaillée la structure du paquet.
         packet.show()
+        # Extract the raw payload (after Ethernet header)
+        raw_payload = bytes(packet.payload)
+
+        # Extract GeoNetworking header and ITS payload (adjust offset as needed)
+        if len(raw_payload) > 40:  # Ensure enough bytes for decoding
+            latitude_raw, longitude_raw = struct.unpack_from(">ii", raw_payload, offset=30)
+
+            # Convert from scaled integer representation (1e7 scaling factor)
+            latitude = latitude_raw / 10**7
+            longitude = longitude_raw / 10**7
+
+            print("\n==== Position du véhicule ====")
+            print(f"Latitude: {latitude:.7f}°")
+            print(f"Longitude: {longitude:.7f}°")
+        else:
+            print("Erreur : Le message est trop court pour contenir des coordonnées GPS.")
     except Exception as e:
         print("Erreur lors de la décodification du paquet :", e)
         print("Contenu brut (hexadécimal) :", msg.payload.hex())
