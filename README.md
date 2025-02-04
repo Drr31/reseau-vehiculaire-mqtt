@@ -1,7 +1,7 @@
 # Mise en place d'une communication MQTT pour la transmission de traces CAM dans un réseau véhiculaire
 
 **Auteur :** Rochdi DARDOR, Ameur BENSGHAIER, Roy EL HADDAD **IATIC5**  
-**Date :** [04/02/2025]
+**Date :** 04/02/2025
 
 ---
 
@@ -60,8 +60,11 @@ Pour une meilleure organisation et réutilisabilité du code, nous avons découp
 ### 4.1 Module MQTT (mqtt_service.py)
 Ce module encapsule toute la logique de connexion, publication et abonnement au broker MQTT.
 Il propose une classe MQTTService qui permet de :
+
   -Se connecter au broker (adresse par défaut : localhost, port : 1883).
+  
   -Publier des messages sur un topic donné.
+  
   -S'abonner à des topics et définir des callbacks pour la gestion des messages.
 
 ### 4.2 Producteur (producer.py)
@@ -75,10 +78,13 @@ L'utilisation de Scapy permet d'analyser les différentes couches du paquet, not
 ## 5. Expérimentation et Résultats
 ### 5.1 Mise en place de l'environnement
 Installation du broker Mosquitto :
+
 Mosquitto a été installé via Homebrew sur Mac (commande : brew install mosquitto) et lancé avec la commande mosquitto dans un terminal.
 
 Lancement des scripts :
+
 1.Le consommateur a été lancé pour s'abonner au topic et attendre les messages.
+
 2.Le producteur a ensuite été exécuté, lisant le fichier PCAP et publiant les paquets sur le broker.
 
 ### 5.2 Exemple de sortie
@@ -108,6 +114,7 @@ Cette sortie indique que :
 
 ## 6. Discussion
  Avantages du Modèle Publication/Abonnement
+ 
 Découplage des composants :
 Le producteur et le consommateur n'ont pas besoin de se connaître directement. Le broker (Mosquitto) se charge de la transmission, ce qui simplifie l'architecture.
 
