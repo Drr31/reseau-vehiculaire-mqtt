@@ -43,6 +43,8 @@ Le système est composé de trois entités principales :
 - **Consommateur :** S'abonne au même topic et, à la réception des messages, décode et affiche le contenu des paquets.
 
 **Schéma Simplifié :**
+
+```plaintext
 +-------------------+          +-----------------+          +--------------------+
 |                   |          |                 |          |                    |
 |   Producteur      |          |   Broker MQTT   |          |   Consommateur     |
@@ -50,6 +52,7 @@ Le système est composé de trois entités principales :
 |  publication)     | -------> |                 | -------> |  paquets reçus)    |
 +-------------------+          +-----------------+          +--------------------+
 
+```
 
 ## 4. Implémentation
 Pour une meilleure organisation et réutilisabilité du code, nous avons découpé le projet en trois fichiers principaux :
@@ -57,10 +60,9 @@ Pour une meilleure organisation et réutilisabilité du code, nous avons découp
 ### 4.1 Module MQTT (mqtt_service.py)
 Ce module encapsule toute la logique de connexion, publication et abonnement au broker MQTT.
 Il propose une classe MQTTService qui permet de :
-
--Se connecter au broker (adresse par défaut : localhost, port : 1883).
--Publier des messages sur un topic donné.
--S'abonner à des topics et définir des callbacks pour la gestion des messages.
+  -Se connecter au broker (adresse par défaut : localhost, port : 1883).
+  -Publier des messages sur un topic donné.
+  -S'abonner à des topics et définir des callbacks pour la gestion des messages.
 
 ### 4.2 Producteur (producer.py)
 Le producteur lit le fichier PCAP contenant les traces CAM et publie chaque paquet converti en bytes sur le topic "vehicule/cam".
