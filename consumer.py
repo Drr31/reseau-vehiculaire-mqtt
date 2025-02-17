@@ -1,69 +1,59 @@
-from scapy.all import Ether # Pour décoder le paquet reçu et afficher ses détails.
-from mqtt_service import MQTTService
+from flask import Flask, render_template, jsonify
+import folium
 import struct
+from scapy.all import Ether
+from mqtt_service import MQTTService
 
-MQTT_TOPIC="vehicule/cam"
+MQTT_TOPIC = "vehicule/cam"
+app = Flask(__name__)
 
-def on_connect(client,userdata,flags,rc):
-    """
-    Fonction callback appelée lors de la connexion au broker MQTT.
-    
-    :param client: L'instance du client MQTT.
-    :param rc: Code de retour de la connexion.
-    """
-    print("Connecté au broker MQTT avec le code retour ✅", rc)
-    # Une fois connecté, s'abonner au topic pour recevoir les messages.
+# Store last received GPS data
+vehicle_data = {"latitude": 0, "longitude": 0, "speed": 0}
+
+# MQTT Callbacks
+def on_connect(client, userdata, flags, rc):
+    print("Connected to MQTT broker ✅, return code:", rc)
     client.subscribe(MQTT_TOPIC)
 
-def on_message(client,userdata,msg):
-    """
-    Fonction callback appelée lorsqu'un message est reçu.
-    
-    :param client: L'instance du client MQTT.
-    :param msg: L'objet message contenant le topic et le payload.
-    """
-    print("\n==== Message reçu ===")
-    print("Topic : ",msg.topic)
-    print("Taille du paquet :", len(msg.payload),"octets")
-
+def on_message(client, userdata, msg):
+    global vehicle_data
     try:
-        # Tente de décoder le payload en utilisant la couche Ethernet avec Scapy.
-        packet=Ether(msg.payload)
-        print("Détails du paquet :")
-        # Affiche de manière détaillée la structure du paquet.
-        packet.show()
-        # Extract the raw payload (after Ethernet header)
+        packet = Ether(msg.payload)
         raw_payload = bytes(packet.payload)
 
-        # Extract GeoNetworking header and ITS payload (adjust offset as needed)
-        if len(raw_payload) > 40:  # Ensure enough bytes for decoding
-            latitude_raw, longitude_raw = struct.unpack_from(">ii", raw_payload, offset=30)
+        # Extract latitude, longitude, and speed
+        latitude_raw, longitude_raw = struct.unpack_from(">i i", raw_payload, offset=36)
+        speed_raw = struct.unpack_from(">H", raw_payload, offset=50)[0]
 
-            # Convert from scaled integer representation (1e7 scaling factor)
-            latitude = latitude_raw / 10**7
-            longitude = longitude_raw / 10**7
+        # Convert to real-world values
+        latitude = latitude_raw / 10**7
+        longitude = longitude_raw / 10**7
+        speed = speed_raw * 0.01  # Convert from 0.01 m/s
 
-            print("\n==== Position du véhicule ====")
-            print(f"Latitude: {latitude:.7f}°")
-            print(f"Longitude: {longitude:.7f}°")
-        else:
-            print("Erreur : Le message est trop court pour contenir des coordonnées GPS.")
+        vehicle_data = {"latitude": latitude, "longitude": longitude, "speed": speed}
+        print(f"Updated Vehicle Data: {vehicle_data}")
+
     except Exception as e:
-        print("Erreur lors de la décodification du paquet :", e)
-        print("Contenu brut (hexadécimal) :", msg.payload.hex())
+        print("Error decoding packet:", e)
 
-def main():
-    # Création et initialisation du service MQTT pour se connecter au broker.
-    mqtt_service=MQTTService(broker="localhost",port=1883)
-    # Définition de la fonction callback à utiliser lors de la connexion.
-    mqtt_service.set_on_connect(on_connect)
-    # Définition de la fonction callback à utiliser lorsqu'un message est reçu.
-    mqtt_service.set_on_message(on_message)
-    # Connexion au broker MQTT.
-    mqtt_service.connect()
-    print("En attente des messages sur le topic :", MQTT_TOPIC)
-    mqtt_service.loop_forever()
+# Flask Route: Serve Updated Map
+@app.route("/")
+def index():
+    return render_template("map.html")
 
-if __name__ == '__main__':
-    main()
-    
+@app.route("/data")
+def get_data():
+    return jsonify(vehicle_data)
+
+# MQTT Initialization
+mqtt_service = MQTTService(broker="localhost", port=1883)
+mqtt_service.set_on_connect(on_connect)
+mqtt_service.set_on_message(on_message)
+mqtt_service.connect()
+
+# Run Flask and MQTT together
+if __name__ == "__main__":
+    import threading
+    mqtt_thread = threading.Thread(target=mqtt_service.loop_forever, daemon=True)
+    mqtt_thread.start()
+    app.run(host="0.0.0.0", port=8080, debug=True)

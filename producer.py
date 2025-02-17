@@ -12,7 +12,8 @@ def main():
 
     #Lecture du fichier PCAP
     try:
-        packets=rdpcap("etsi-its-cam-unsecured.pcapng")
+        # packets=rdpcap("etsi-its-cam-unsecured.pcapng")
+        packets=rdpcap("v2v-EVA-2-0.pcap")
     except Exception as e :
         print("Erreur lors de la lecture du fichier PCAP: ",e)
         return
