@@ -1,38 +1,51 @@
+import os
 import time
-from scapy.all import rdpcap  # Pour lire le fichier PCAP et manipuler les paquets.
-from mqtt_service import MQTTService
+import json
+import pyshark
+import paho.mqtt.client as mqtt
 
-# Définition du topic sur lequel les paquets seront publiés.
-MQTT_TOPIC="vehicule/cam"
+MQTT_BROKER = "localhost"
+MQTT_TOPIC = "vehicule/cam"
+PCAP_FILENAME = "v2v-EVA-2-0-filtered.pcap" 
 
 def main():
-    #Instanciation du service MQTT
-    mqtt_service=MQTTService(broker="localhost",port=1883)
-    mqtt_service.connect()
+    client = mqtt.Client()
+    client.connect(MQTT_BROKER, 1883, 60)
+    pcap_path = os.path.join(os.path.dirname(__file__), PCAP_FILENAME)
+    print(f"Lecture du fichier: {pcap_path}")
+    cap = pyshark.FileCapture(pcap_path)
 
-    #Lecture du fichier PCAP
-    try:
-        # packets=rdpcap("etsi-its-cam-unsecured.pcapng")
-        packets=rdpcap("v2v-EVA-2-0.pcap")
-    except Exception as e :
-        print("Erreur lors de la lecture du fichier PCAP: ",e)
-        return
-    
-    print(f"Nombre de paquets lus = {len(packets)}")
+    for i, packet in enumerate(cap):
+        try:
+            if hasattr(packet, 'its'):
+                station_id = int(packet.its.stationid)
+                latitude   = int(packet.its.latitude) / 1e7
+                longitude  = int(packet.its.longitude) / 1e7
+                speed      = int(packet.its.speedvalue) / 100.0
+                heading    = int(packet.its.headingvalue)
 
-    #Publication des paquets sur le topic
-    for i,pkt in enumerate(packets):
-    # Conversion du paquet en bytes pour pouvoir le publier.
-        raw_pkt=bytes(pkt)
-        print(f"Publication du paquet {i+1}/{len(packets)}")
-    # Publication du paquet sur le topic défini avec un QoS de 1 (garantie au moins une livraison).
-        mqtt_service.publish(MQTT_TOPIC,payload=raw_pkt,qos=1)
-    # Délai de 0,1 seconde entre chaque publication pour ne pas saturer le broker.
-        time.sleep(0.1)
-    # Déconnexion propre du broker une fois tous les paquets publiés.
-    mqtt_service.disconnect()
-    print("Tous les paquets ont été publiées ✅.")
+                # Build the JSON data
+                cam_data = {
+                    "stationId": station_id,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "speed": speed,
+                    "heading": heading
+                }
 
-if __name__ == '__main__':
+                json_str = json.dumps(cam_data)
+                client.publish(MQTT_TOPIC, json_str)
+                print(f"Envoyé {i+1} : {cam_data}")
+
+                time.sleep(0.1)
+            else:
+                print(f"Paquet #{i+1} ne contient pas de couche 'its'. Ignoré.")
+        except AttributeError:
+            print(f"Paquet #{i+1} ignoré (champs manquants).")
+
+    cap.close()
+    client.disconnect()
+    print("Fin de l'envoi des données.")
+
+if __name__ == "__main__":
     main()
-    

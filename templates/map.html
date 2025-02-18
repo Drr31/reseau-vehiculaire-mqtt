@@ -1,42 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Tracker</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
-    <style>
-        #map { height: 90vh; width: 100%; }
-    </style>
+  <title>Live Vehicle Map</title>
+  <meta charset="utf-8" />
+
+  <!-- Leaflet CSS/JS (CDN) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* Fullscreen map */
+    #map {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
 </head>
+
 <body>
-    <h2>Real-Time Vehicle Tracker</h2>
-    <div id="map"></div>
+  <div id="map"></div>
 
-    <script>
-        var map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+  <script>
+    // Initialize Leaflet map
+    const map = L.map('map').setView([45.0531764, 7.6578783], 17);
 
-        var marker = L.marker([0, 0]).addTo(map);
+    // Load a base layer (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 20,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-        function updateMap() {
-            $.getJSON("/data", function(data) {
-                var lat = data.latitude;
-                var lon = data.longitude;
-                var speed = data.speed;
-                
-                if (lat !== 0 && lon !== 0) {
-                    marker.setLatLng([lat, lon]);
-                    map.setView([lat, lon], 15);
-                }
-            });
-        }
+    // We'll store markers by stationId
+    const markers = {};
 
-        setInterval(updateMap, 3000);
-    </script>
+    // Fetch new data from /data and update markers
+    async function fetchDataAndUpdate() {
+      try {
+        const response = await fetch('/data');
+        const vehicles = await response.json(); // array of {stationId, latitude, longitude, speed, ...}
+
+        vehicles.forEach(vehicle => {
+          const stationId = vehicle.stationId;
+          const lat = vehicle.latitude;
+          const lon = vehicle.longitude;
+          const speed = vehicle.speed || 0.0;
+          const heading = vehicle.heading || 0;
+
+          // If we don't have a marker for this stationId, create one
+          if (!markers[stationId]) {
+            const marker = L.marker([lat, lon]).addTo(map);
+            markers[stationId] = marker;
+          }
+
+          // Update marker position
+          markers[stationId].setLatLng([lat, lon]);
+
+          // Update popup content
+          const popupContent = `
+            <b>Vehicle ID:</b> ${stationId}<br/>
+            <b>Speed:</b> ${speed} km/h<br/>
+            <b>Heading:</b> ${heading}
+          `;
+          markers[stationId].bindPopup(popupContent);
+        });
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    }
+
+    // Periodically fetch data (every 2 seconds)
+    setInterval(fetchDataAndUpdate, 2000);
+
+    // Also fetch once on page load
+    fetchDataAndUpdate();
+  </script>
 </body>
 </html>

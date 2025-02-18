@@ -2,3 +2,4 @@ scapy
 paho-mqtt
 folium
 flask
+pyshark
